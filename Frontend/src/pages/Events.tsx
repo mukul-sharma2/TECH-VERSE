@@ -188,7 +188,7 @@ const socialMediaLinks = [
   },
 ];
 
-const Events = () => {
+const EngineersDay = () => {
   const formRef = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
@@ -577,7 +577,7 @@ const Events = () => {
                 <div className="pt-3">
                   <Button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={true}
                     className="w-full py-6 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-base shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 disabled:opacity-50"
                   >
                     {isSubmitting ? (
@@ -661,4 +661,4 @@ const Events = () => {
   );
 };
 
-export default Events;
+export default EngineersDay;
