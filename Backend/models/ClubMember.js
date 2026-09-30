@@ -1,0 +1,36 @@
+const mongoose = require('mongoose');
+
+const ClubMemberSchema = new mongoose.Schema({
+  serialNumber: { type: Number, index: true },
+  memberId: { type: String, default: '' },
+  name: { type: String, required: true },
+  regNumber: { type: String, required: true },
+  contact: { type: String, required: true },
+  email: { type: String, required: true },
+  department: { type: String, required: true },
+  specialization: { type: String, default: '' },
+  batch: { type: String, required: true },
+  residenceType: { type: String, enum: ['Hosteller', 'Day Scholar'], default: 'Day Scholar' },
+  photo: { type: String, default: '' },
+  interests: { type: [String], default: [] },
+  otherInterest: { type: String, default: '' },
+  designation: { type: String, default: '' },
+  roleAssignee: { type: String, default: '' },
+  role: { type: String, default: 'Member' },
+  status: { type: String, default: 'Official Member' },
+  screeningEmailSent: { type: Boolean, default: true },
+  cardSent: { type: Boolean, default: false },
+  cardSentAt: { type: Date },
+  consentGiven: { type: Boolean, default: false },
+  consentTimestamp: { type: Date },
+  resignedAt: { type: Date },
+  resignationRemarks: { type: String, default: '' },
+  terminatedAt: { type: Date },
+  terminationReason: { type: String, default: '' },
+  terminationRemarks: { type: String, default: '' },
+  fineAmount: { type: Number, default: 0 },
+  joinedAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: Date.now },
+}, { strict: false, collection: 'clubmembers' });
+
+module.exports = mongoose.model('ClubMember', ClubMemberSchema);

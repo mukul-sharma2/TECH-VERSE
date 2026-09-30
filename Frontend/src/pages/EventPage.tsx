@@ -9,6 +9,7 @@ import EventCard from "@/components/ui/EventCard";
 import UniversityLogo from "@/assets/univeee-logo.png";
 import SoetLogo from "@/assets/soet-logo.png";
 import { EnquiryDialog } from "@/components/EnquiryDialog";
+import { EnquiryFormDialog } from "@/components/EnquiryFormDialog";
 import { Code2, Cpu, Database, Globe, Binary } from "lucide-react";
 import { FloatingSocials } from "@/components/FloatingSocials";
 import { FeatureCard } from "@/components/FeatureCard";
@@ -16,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 
 const EventPage = () => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEnquiryFormOpen, setIsEnquiryFormOpen] = useState(false);
     const navigate = useNavigate();
 
   const stats = [
@@ -241,7 +243,15 @@ const EventPage = () => {
                 className="gap-2 hover:scale-105 transition-transform"
                 onClick={() => setIsDialogOpen(true)}
               >
-                Get started today
+                Apply for membership
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="gap-2 hover:scale-105 transition-transform"
+                onClick={() => setIsEnquiryFormOpen(true)}
+              >
+                Send an enquiry
               </Button>
             </div>
           </div>
@@ -249,6 +259,7 @@ const EventPage = () => {
       </section>
        {/* Enquiry Dialog */}
       <EnquiryDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+      <EnquiryFormDialog open={isEnquiryFormOpen} onOpenChange={setIsEnquiryFormOpen} />
       <FloatingSocials />
     </div>
   );
