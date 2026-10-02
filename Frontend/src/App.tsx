@@ -20,6 +20,8 @@ import NotFound from "./pages/NotFound";
 import Loading from "./components/Loading";
 import Register from "./components/Register"
 import CodeCrafter from "./pages/CodeCrafter";
+import AdminPortal from "./pages/AdminPortal";
+
 
 const queryClient = new QueryClient();
 
@@ -68,6 +70,8 @@ const AppContent: React.FC = () => {
         <Route path="/events/codecrafter" element={<CodeCrafter />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/events/engineersday" element={<EngineersDay/>} />
+        <Route path="/admin" element={<AdminPortal />} />
+
       </Routes>
       {location.pathname !== '/codecrafter' && <Footer />}
     </>
