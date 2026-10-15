@@ -75,6 +75,8 @@ app.use('/api/contact', require('./routes/ContactServer'));
 app.use('/api/aboutus', require('./routes/AboutServer'));
 app.use('/api/enquiry', require('./routes/Enquiry'));
 app.use('/api/mentors', require('./routes/Mentor'));
+app.use('/api/admin', require('./routes/AdminRoute'));
+app.use('/api/club-members', require('./routes/ClubMemberServer'));
 app.use('/api/register', require('./routes/RegistrationServer'));
 app.use('/api/codecrafter-register', require('./routes/CodeCrafterRegistrationServer'));
 app.use('/api/robomech-register', require('./routes/RoboMechRegistrationServer'));

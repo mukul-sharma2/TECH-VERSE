@@ -2,6 +2,13 @@
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 // URL logs removed for prod safety
+const getAdminAuthHeaders = () => {
+  const token = localStorage.getItem('techverse_admin_token');
+  if (!token) {
+    throw new Error('Admin session expired. Please log in again.');
+  }
+  return { Authorization: `Bearer ${token}` };
+};
 
 // ==================== Get Requests ====================
 
@@ -51,6 +58,62 @@ export const getGallery = async (category?: string) => {
     return response.json();
   } catch (error) {
     console.error('Error fetching gallery:', error);
+    throw error;
+  }
+};
+
+export interface GalleryItem {
+  _id: string;
+  name?: string;
+  img_url: string;
+  description?: string;
+  category: string;
+}
+
+export interface GalleryUploadResponse {
+  success: boolean;
+  message: string;
+  item: GalleryItem;
+}
+
+export class ApiError extends Error {
+  response?: { data?: Record<string, unknown> };
+  status?: number;
+}
+
+export const uploadGalleryImage = async (formData: FormData): Promise<GalleryUploadResponse> => {
+  const token = localStorage.getItem("techverse_admin_token");
+  const url = `${API_BASE_URL}/api/gallery`;
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    let data: Record<string, unknown> = {};
+    try {
+      data = (await response.json()) as Record<string, unknown>;
+    } catch {
+      data = {};
+    }
+
+    if (!response.ok) {
+      const errorMessage = typeof data.message === 'string' ? data.message : 'Failed to upload gallery image';
+      const error = new ApiError(errorMessage);
+      error.response = { data };
+      error.status = response.status;
+      throw error;
+    }
+
+    return data as unknown as GalleryUploadResponse;
+  } catch (error) {
+    console.error('Error uploading gallery image:', error);
     throw error;
   }
 };
@@ -312,32 +375,23 @@ export const registerEngineersDayParticipant = async (submissionData: any) => {
 // ==================== Admin Portal APIs ====================
 
 export const getScreeningMembers = async () => {
-  const url = `${API_BASE_URL}/api/screening-members`;
+  const url = `${API_BASE_URL}/api/club-members/screening`;
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: getAdminAuthHeaders() });
     if (!response.ok) {
-      // Fallback to /api/club-members/screening
-      const fallback = await fetch(`${API_BASE_URL}/api/club-members/screening`);
-      if (fallback.ok) return await fallback.json();
       throw new Error(`HTTP ${response.status}: Failed to fetch screening members`);
     }
     return await response.json();
   } catch (error) {
     console.error('Error fetching screening members:', error);
-    // Graceful fallback to filtering getClubMembers if route isn't available yet
-    try {
-      const allMembers = await getClubMembers();
-      return Array.isArray(allMembers) ? allMembers.filter((m: any) => m.status === 'Under Screening' || !m.designation) : [];
-    } catch {
-      throw error;
-    }
+    throw error;
   }
 };
 
 export const getClubMembers = async () => {
   const url = `${API_BASE_URL}/api/club-members`;
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: getAdminAuthHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to fetch club members`);
     return await response.json();
   } catch (error) {
@@ -380,6 +434,7 @@ export const promoteClubMember = async (
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        ...getAdminAuthHeaders(),
       },
       body: JSON.stringify(promoteData),
     });
@@ -395,14 +450,14 @@ export const promoteClubMember = async (
       // Fallback to PUT /api/club-members/:id/promote or /role
       const fallback = await fetch(`${API_BASE_URL}/api/club-members/${id}/promote`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAdminAuthHeaders() },
         body: JSON.stringify(promoteData),
       });
       if (fallback.ok) return await fallback.json();
 
       const fallbackRole = await fetch(`${API_BASE_URL}/api/club-members/${id}/role`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAdminAuthHeaders() },
         body: JSON.stringify({ ...promoteData, status: 'Official Member' }),
       });
       if (fallbackRole.ok) return await fallbackRole.json();
@@ -425,7 +480,7 @@ export const acceptMemberResignation = async (
   try {
     const response = await fetch(url, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAdminAuthHeaders() },
       body: JSON.stringify(data),
     });
 
@@ -439,7 +494,7 @@ export const acceptMemberResignation = async (
     if (!response.ok) {
       const fallback = await fetch(`${API_BASE_URL}/api/club-members/${id}/resign`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAdminAuthHeaders() },
         body: JSON.stringify(data),
       });
       if (fallback.ok) return await fallback.json();
@@ -461,7 +516,7 @@ export const terminateClubMember = async (
   try {
     const response = await fetch(url, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAdminAuthHeaders() },
       body: JSON.stringify(data),
     });
 
@@ -475,7 +530,7 @@ export const terminateClubMember = async (
     if (!response.ok) {
       const fallback = await fetch(`${API_BASE_URL}/api/club-members/${id}/terminate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAdminAuthHeaders() },
         body: JSON.stringify(data),
       });
       if (fallback.ok) return await fallback.json();
@@ -499,6 +554,7 @@ export const updateClubMemberRole = async (
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        ...getAdminAuthHeaders(),
       },
       body: JSON.stringify(updateData),
     });
@@ -516,6 +572,7 @@ export const updateClubMemberRole = async (
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminAuthHeaders(),
         },
         body: JSON.stringify(updateData),
       });
@@ -629,17 +686,18 @@ export const verifyAdminToken = async (token: string) => {
 };
 
 export const deleteScreeningMember = async (id: string) => {
-  const url = `${API_BASE_URL}/api/screening-members/${id}`;
+  const url = `${API_BASE_URL}/api/club-members/screening/${id}`;
   try {
     const response = await fetch(url, {
       method: 'DELETE',
+      headers: getAdminAuthHeaders(),
     });
     if (!response.ok) {
-      // Fallback to /api/club-members/screening/:id or /api/club-members/:id
-      const fallback = await fetch(`${API_BASE_URL}/api/club-members/screening/${id}`, { method: 'DELETE' });
+      const fallback = await fetch(`${API_BASE_URL}/api/club-members/${id}`, {
+        method: 'DELETE',
+        headers: getAdminAuthHeaders(),
+      });
       if (fallback.ok) return await fallback.json().catch(() => ({ success: true }));
-      const fallback2 = await fetch(`${API_BASE_URL}/api/club-members/${id}`, { method: 'DELETE' });
-      if (fallback2.ok) return await fallback2.json().catch(() => ({ success: true }));
       const data = await response.json().catch(() => ({}));
       throw new Error(data.message || 'Failed to delete screening member application');
     }
@@ -655,6 +713,7 @@ export const deleteClubMember = async (id: string) => {
   try {
     const response = await fetch(url, {
       method: 'DELETE',
+      headers: getAdminAuthHeaders(),
     });
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
@@ -700,6 +759,5 @@ export const deleteContact = async (id: string) => {
     throw error;
   }
 };
-
 
 
