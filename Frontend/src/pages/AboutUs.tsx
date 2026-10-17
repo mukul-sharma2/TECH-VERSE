@@ -270,7 +270,7 @@ useEffect(() => {
         </div>
         <div className="flex flex-col items-center gap-14">
           {/* ✅ FIX: grid-cols-2 for mobile, lg:grid-cols-3 for desktop */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 md:gap-12 lg:gap-x-28 justify-items-center">
+            <div className="flex justify-center items-center gap-12 flex-wrap">
             {mentors.map((member, index) => {
               const sliceLength = mentors.length;
               const isLastItemAndOdd = (index === sliceLength - 1) && (sliceLength % 2 !== 0);
