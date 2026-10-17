@@ -36,10 +36,13 @@ import {
   AlertTriangle,
   Ban,
   FileText,
-  X
+  X,
+  Image as ImageIcon,
+  UploadCloud
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
@@ -58,7 +61,10 @@ import {
   deleteScreeningMember,
   sendEmailDirect,
   deleteEnquiry,
-  deleteContact
+  deleteContact,
+  getGallery,
+  uploadGalleryImage,
+  GalleryItem
 } from "@/services/api";
 
 export interface ClubMemberItem {
@@ -124,7 +130,7 @@ export default function AdminPortal() {
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  const [activeTab, setActiveTab] = useState<"screening" | "official-members" | "queries" | "arenas">("screening");
+  const [activeTab, setActiveTab] = useState<"screening" | "official-members" | "queries" | "arenas" | "gallery">("screening");
   const [editingOfficialId, setEditingOfficialId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -132,6 +138,21 @@ export default function AdminPortal() {
   const [confirmDeleteEnquiryId, setConfirmDeleteEnquiryId] = useState<string | null>(null);
   const [confirmDeleteContactId, setConfirmDeleteContactId] = useState<string | null>(null);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+
+  // Gallery Management States
+  const [galleryList, setGalleryList] = useState<GalleryItem[]>([]);
+  const [loadingGallery, setLoadingGallery] = useState<boolean>(false);
+  const [galleryFile, setGalleryFile] = useState<File | null>(null);
+  const [galleryPreviewUrl, setGalleryPreviewUrl] = useState<string | null>(null);
+  const [galleryCategoryMode, setGalleryCategoryMode] = useState<"existing" | "new">("existing");
+  const [gallerySelectedCategory, setGallerySelectedCategory] = useState<string>("");
+  const [galleryNewCategory, setGalleryNewCategory] = useState<string>("");
+  const [galleryName, setGalleryName] = useState<string>("");
+  const [galleryDescription, setGalleryDescription] = useState<string>("");
+  const [isUploadingGallery, setIsUploadingGallery] = useState<boolean>(false);
+  const [galleryUploadError, setGalleryUploadError] = useState<string | null>(null);
+  const [galleryFilterCategory, setGalleryFilterCategory] = useState<string>("all");
+  const [gallerySearchQuery, setGallerySearchQuery] = useState<string>("");
 
   // Promotion Modal State
   const [promotingMember, setPromotingMember] = useState<ClubMemberItem | null>(null);
@@ -173,39 +194,198 @@ export default function AdminPortal() {
   // Local editable draft state for role/designation
   const [editDrafts, setEditDrafts] = useState<{ [id: string]: { designation: string; roleAssignee: string } }>({});
 
+  const loadGalleryData = async () => {
+    setLoadingGallery(true);
+    try {
+      const data = await getGallery();
+      if (Array.isArray(data)) {
+        setGalleryList(data);
+      }
+    } catch (err) {
+      console.error("Error refreshing gallery items:", err);
+    } finally {
+      setLoadingGallery(false);
+    }
+  };
+
+  const galleryCategories = useMemo(() => {
+    return Array.from(new Set(galleryList.map((item) => item.category?.trim()).filter(Boolean)));
+  }, [galleryList]);
+
+  useEffect(() => {
+    if (galleryCategories.length === 0) {
+      setGalleryCategoryMode("new");
+    } else if (!gallerySelectedCategory && galleryCategories.length > 0) {
+      setGallerySelectedCategory(galleryCategories[0]);
+    }
+  }, [galleryCategories, gallerySelectedCategory]);
+
+  const filteredGalleryItems = useMemo(() => {
+    return galleryList.filter((item) => {
+      const q = gallerySearchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        item.name?.toLowerCase().includes(q) ||
+        item.category?.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q);
+
+      const matchesCat = galleryFilterCategory === "all" || item.category === galleryFilterCategory;
+      return matchesSearch && matchesCat;
+    });
+  }, [galleryList, gallerySearchQuery, galleryFilterCategory]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setGalleryUploadError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml", "image/avif"];
+    if (!allowedTypes.includes(file.type)) {
+      const err = "Invalid image type. Please select a JPEG, PNG, WebP, GIF, SVG, or AVIF file.";
+      setGalleryUploadError(err);
+      toast.error(err);
+      e.target.value = "";
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5MB limit
+    if (file.size > maxSize) {
+      const err = `File size (${(file.size / (1024 * 1024)).toFixed(2)} MB) exceeds 5MB limit. Please choose a smaller image.`;
+      setGalleryUploadError(err);
+      toast.error(err);
+      e.target.value = "";
+      return;
+    }
+
+    if (galleryPreviewUrl) {
+      URL.revokeObjectURL(galleryPreviewUrl);
+    }
+    setGalleryFile(file);
+    setGalleryPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleRemoveSelectedFile = () => {
+    if (galleryPreviewUrl) {
+      URL.revokeObjectURL(galleryPreviewUrl);
+    }
+    setGalleryFile(null);
+    setGalleryPreviewUrl(null);
+    setGalleryUploadError(null);
+    const fileInput = document.getElementById("gallery-file-input") as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+  };
+
+  const handleGallerySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGalleryUploadError(null);
+
+    if (!galleryFile) {
+      setGalleryUploadError("Please select an image file to upload.");
+      toast.error("Please select an image file.");
+      return;
+    }
+
+    const finalCategory = (galleryCategoryMode === "new" ? galleryNewCategory : gallerySelectedCategory).trim();
+    if (!finalCategory) {
+      setGalleryUploadError("Please provide a category for the photograph.");
+      toast.error("Category is required.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", galleryFile);
+    formData.append("category", finalCategory);
+    if (galleryName.trim()) {
+      formData.append("name", galleryName.trim());
+    }
+    if (galleryDescription.trim()) {
+      formData.append("description", galleryDescription.trim());
+    }
+
+    setIsUploadingGallery(true);
+    try {
+      await uploadGalleryImage(formData);
+      toast.success(`🎉 Image uploaded successfully to "${finalCategory}" gallery!`);
+
+      // Clear form & preview
+      if (galleryPreviewUrl) {
+        URL.revokeObjectURL(galleryPreviewUrl);
+      }
+      setGalleryFile(null);
+      setGalleryPreviewUrl(null);
+      setGalleryName("");
+      setGalleryDescription("");
+      setGalleryNewCategory("");
+      setGallerySelectedCategory(finalCategory);
+      setGalleryCategoryMode("existing");
+
+      const fileInput = document.getElementById("gallery-file-input") as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+
+      // Refresh gallery collection
+      await loadGalleryData();
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string };
+      const msg = apiErr?.response?.data?.message || apiErr?.message || "Failed to upload gallery image.";
+      setGalleryUploadError(msg);
+      toast.error(msg);
+    } finally {
+      setIsUploadingGallery(false);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [screeningData, officialData, enquiriesData, contactsData, statsData] = await Promise.allSettled([
+      const [screeningData, officialData, enquiriesData, contactsData, statsData, galleryData] = await Promise.allSettled([
         getScreeningMembers(),
         getClubMembers(),
         getEnquiries(),
         getContacts(),
         getEngineersDayStats(),
+        getGallery(),
       ]);
 
       let loadedScreening: ClubMemberItem[] = [];
       let loadedOfficial: ClubMemberItem[] = [];
+      const memberLoadErrors: string[] = [];
 
       if (screeningData.status === "fulfilled" && Array.isArray(screeningData.value)) {
         loadedScreening = screeningData.value;
+        setScreeningList(loadedScreening);
+      } else {
+        memberLoadErrors.push("screening applications");
       }
       if (officialData.status === "fulfilled" && Array.isArray(officialData.value)) {
         loadedOfficial = officialData.value;
+        setOfficialList(loadedOfficial);
+      } else {
+        memberLoadErrors.push("official members");
       }
 
-      setScreeningList(loadedScreening);
-      setOfficialList(loadedOfficial);
-
       // Initialize editable drafts for both lists
-      const initialDrafts: any = {};
-      [...loadedScreening, ...loadedOfficial].forEach((m: ClubMemberItem) => {
-        initialDrafts[m._id] = {
-          designation: m.designation || "",
-          roleAssignee: m.roleAssignee || "",
-        };
-      });
-      setEditDrafts(initialDrafts);
+      const successfulMembers = [
+        ...(screeningData.status === "fulfilled" ? loadedScreening : []),
+        ...(officialData.status === "fulfilled" ? loadedOfficial : []),
+      ];
+      setEditDrafts((previousDrafts) => ({
+        ...previousDrafts,
+        ...Object.fromEntries(successfulMembers.map((member) => [
+          member._id,
+          {
+            designation: member.designation || "",
+            roleAssignee: member.roleAssignee || "",
+          },
+        ])),
+      }));
+
+      if (memberLoadErrors.length > 0) {
+        console.error("Failed to load admin member data:", {
+          screening: screeningData.status === "rejected" ? screeningData.reason : undefined,
+          official: officialData.status === "rejected" ? officialData.reason : undefined,
+        });
+        toast.error(`Could not load ${memberLoadErrors.join(" and ")}. Check your admin session and backend connection.`);
+      }
 
       if (enquiriesData.status === "fulfilled" && Array.isArray(enquiriesData.value)) {
         setEnquiries(enquiriesData.value);
@@ -217,6 +397,14 @@ export default function AdminPortal() {
 
       if (statsData.status === "fulfilled" && statsData.value?.breakdown) {
         setEventStats(statsData.value);
+      }
+
+      if (galleryData.status === "fulfilled" && Array.isArray(galleryData.value)) {
+        setGalleryList(galleryData.value);
+        if (galleryData.value.length > 0) {
+          const firstCat = galleryData.value[0]?.category;
+          if (firstCat) setGallerySelectedCategory(firstCat);
+        }
       }
     } catch (err) {
       console.error("Error loading admin data:", err);
@@ -917,7 +1105,7 @@ export default function AdminPortal() {
         </div>
 
         {/* METRICS OVERVIEW CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
           <div 
             onClick={() => setActiveTab("official-members")}
             className="p-3.5 sm:p-5 rounded-2xl bg-[#0b1126]/80 border border-white/10 shadow-lg backdrop-blur-xl cursor-pointer hover:border-blue-500/40 transition-all group"
@@ -974,6 +1162,23 @@ export default function AdminPortal() {
             </div>
             <div className="text-2xl sm:text-3xl font-black font-space text-purple-400">{totalQueries}</div>
             <span className="text-[10px] sm:text-[11px] text-slate-400 mt-1 block truncate">Enquiries &amp; Messages</span>
+          </div>
+
+          <div 
+            onClick={() => setActiveTab("gallery")}
+            className={`p-3.5 sm:p-5 rounded-2xl bg-[#0b1126]/80 border shadow-lg backdrop-blur-xl cursor-pointer transition-all group ${
+              activeTab === "gallery" ? "border-cyan-500/60 ring-1 ring-cyan-500/40" : "border-white/10 hover:border-cyan-500/40"
+            }`}
+            title="Click to manage Event Gallery"
+          >
+            <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono text-slate-400 mb-1.5 sm:mb-2">
+              <span className="truncate">GALLERY PHOTOS</span>
+              <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black font-space text-cyan-400">{galleryList.length}</div>
+            <span className="text-[10px] sm:text-[11px] text-cyan-400/80 mt-1 block truncate">
+              {galleryCategories.length} Categories Active
+            </span>
           </div>
         </div>
 
@@ -1044,6 +1249,23 @@ export default function AdminPortal() {
             <span>Engineers' Day Arenas</span>
             <span className="ml-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-black/40 text-[10px] font-mono">
               {eventStats?.totalRegistrations ?? 13}
+            </span>
+          </button>
+
+          <button
+            id="tab-gallery-btn"
+            type="button"
+            onClick={() => setActiveTab("gallery")}
+            className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ${
+              activeTab === "gallery"
+                ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/25"
+                : "bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Gallery</span>
+            <span className="ml-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-black/40 text-[10px] font-mono text-cyan-200">
+              {galleryList.length}
             </span>
           </button>
         </div>
@@ -1972,6 +2194,357 @@ export default function AdminPortal() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* TAB 5: GALLERY MANAGEMENT                                          */}
+        {/* ================================================================= */}
+        {activeTab === "gallery" && (
+          <div className="space-y-6">
+            {/* Header Callout */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-transparent border border-cyan-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <h2 className="text-lg sm:text-xl font-black font-space text-white flex items-center gap-2">
+                    Event Gallery Management
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Upload event photographs securely through backend Cloudinary storage and organize them by categories. The public gallery updates automatically using dynamic category filters.
+                </p>
+              </div>
+              <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/40 text-xs font-mono px-3 py-1 flex-shrink-0">
+                {galleryList.length} Total Photographs
+              </Badge>
+            </div>
+
+            {/* Layout: Upload Form + Gallery Viewer */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* LEFT / TOP: UPLOAD FORM (5 columns on desktop) */}
+              <div className="lg:col-span-5 bg-[#090e21]/95 border border-cyan-500/20 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <UploadCloud className="w-5 h-5 text-cyan-400" />
+                    <h3 className="text-base font-bold text-white font-space">Upload New Image</h3>
+                  </div>
+                  <span className="text-[10px] font-mono uppercase bg-cyan-500/10 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/20">
+                    Max 5MB
+                  </span>
+                </div>
+
+                <form onSubmit={handleGallerySubmit} className="space-y-4">
+                  {/* File Selector & Drag-Drop area */}
+                  <div>
+                    <label className="block text-xs font-mono text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
+                      Select Image <span className="text-cyan-400">*</span>
+                    </label>
+
+                    {!galleryPreviewUrl ? (
+                      <div className="relative border-2 border-dashed border-white/15 hover:border-cyan-400/50 rounded-2xl p-6 text-center transition-all bg-white/[0.02] hover:bg-cyan-500/[0.03] group cursor-pointer">
+                        <input
+                          id="gallery-file-input"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif"
+                          onChange={handleFileChange}
+                          disabled={isUploadingGallery}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <div className="space-y-2 pointer-events-none">
+                          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                            <ImageIcon className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-white">Click or drag image file here</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              JPEG, PNG, WebP, GIF, SVG, or AVIF (up to 5MB)
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Preview Card */
+                      <div className="relative rounded-2xl overflow-hidden border border-cyan-500/30 bg-[#060a17] p-3 space-y-3">
+                        <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/40 flex items-center justify-center">
+                          <img
+                            src={galleryPreviewUrl}
+                            alt="Selected preview"
+                            className="w-full h-full object-contain"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleRemoveSelectedFile}
+                            disabled={isUploadingGallery}
+                            className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 text-red-300 hover:text-red-100 hover:bg-red-950/80 transition-all border border-red-500/30"
+                            title="Remove image"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {galleryFile && (
+                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 px-1">
+                            <span className="truncate max-w-[200px] text-slate-200">{galleryFile.name}</span>
+                            <span className="text-cyan-300 font-bold shrink-0">
+                              {(galleryFile.size / (1024 * 1024)).toFixed(2)} MB
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category Selection: Existing or New */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono text-slate-300 font-bold uppercase tracking-wider">
+                        Category <span className="text-cyan-400">*</span>
+                      </label>
+                      {galleryCategories.length > 0 && (
+                        <div className="flex items-center gap-1 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() => setGalleryCategoryMode("existing")}
+                            className={`px-2 py-0.5 rounded-lg transition-colors ${
+                              galleryCategoryMode === "existing"
+                                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold"
+                                : "text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            Select Existing
+                          </button>
+                          <span className="text-slate-600">•</span>
+                          <button
+                            type="button"
+                            onClick={() => setGalleryCategoryMode("new")}
+                            className={`px-2 py-0.5 rounded-lg transition-colors ${
+                              galleryCategoryMode === "new"
+                                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold"
+                                : "text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            + New Category
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {galleryCategoryMode === "existing" && galleryCategories.length > 0 ? (
+                      <select
+                        id="gallery-category-select"
+                        value={gallerySelectedCategory}
+                        onChange={(e) => {
+                          if (e.target.value === "__CREATE_NEW__") {
+                            setGalleryCategoryMode("new");
+                          } else {
+                            setGallerySelectedCategory(e.target.value);
+                          }
+                        }}
+                        disabled={isUploadingGallery}
+                        className="w-full bg-white/5 border border-white/10 text-white text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-cyan-400"
+                      >
+                        {galleryCategories.map((cat) => (
+                          <option key={cat} value={cat} className="bg-[#0b1126] text-white">
+                            {cat}
+                          </option>
+                        ))}
+                        <option value="__CREATE_NEW__" className="bg-[#0b1126] text-cyan-300 font-bold">
+                          + Enter a new category...
+                        </option>
+                      </select>
+                    ) : (
+                      <div className="space-y-1">
+                        <Input
+                          id="gallery-new-category-input"
+                          type="text"
+                          required
+                          placeholder="e.g. CodeCrafter 3.0, Annual Fest, Robotics Workshop..."
+                          value={galleryNewCategory}
+                          onChange={(e) => setGalleryNewCategory(e.target.value)}
+                          disabled={isUploadingGallery}
+                          className="bg-white/5 border-white/10 text-white text-xs rounded-xl focus:border-cyan-400"
+                        />
+                        <p className="text-[10px] text-slate-400 font-mono">
+                          This new category will automatically appear as a filter tab in the public gallery.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Optional Image Name/Title */}
+                  <div>
+                    <label className="block text-xs font-mono text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
+                      Title / Caption <span className="text-slate-500 font-normal">(Optional)</span>
+                    </label>
+                    <Input
+                      id="gallery-name-input"
+                      type="text"
+                      placeholder="e.g. Grand Finale Award Ceremony"
+                      value={galleryName}
+                      onChange={(e) => setGalleryName(e.target.value)}
+                      disabled={isUploadingGallery}
+                      className="bg-white/5 border-white/10 text-white text-xs rounded-xl focus:border-cyan-400"
+                    />
+                  </div>
+
+                  {/* Optional Description */}
+                  <div>
+                    <label className="block text-xs font-mono text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
+                      Description <span className="text-slate-500 font-normal">(Optional)</span>
+                    </label>
+                    <Textarea
+                      id="gallery-description-input"
+                      rows={3}
+                      placeholder="e.g. Winning teams receiving their trophies from dignitaries and club coordinators..."
+                      value={galleryDescription}
+                      onChange={(e) => setGalleryDescription(e.target.value)}
+                      disabled={isUploadingGallery}
+                      className="bg-white/5 border-white/10 text-white text-xs rounded-xl focus:border-cyan-400 resize-none"
+                    />
+                  </div>
+
+                  {/* Error Callout */}
+                  {galleryUploadError && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      <span>{galleryUploadError}</span>
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <Button
+                    id="submit-gallery-btn"
+                    type="submit"
+                    disabled={isUploadingGallery || !galleryFile}
+                    className="w-full bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 hover:from-blue-500 hover:to-teal-500 text-white font-bold py-2.5 rounded-xl shadow-lg shadow-cyan-500/25 transition-all text-xs font-mono tracking-wider uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isUploadingGallery ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Uploading to Cloudinary &amp; Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-4 h-4" />
+                        <span>Upload &amp; Publish Photo</span>
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </div>
+
+              {/* RIGHT / BOTTOM: GALLERY ITEMS LIST & OVERVIEW (7 columns on desktop) */}
+              <div className="lg:col-span-7 space-y-4">
+                {/* Search & Category Filter Toolbar */}
+                <div className="p-4 rounded-2xl bg-[#0b1126]/80 border border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      id="admin-gallery-search-input"
+                      type="text"
+                      placeholder="Search gallery by title, category, description..."
+                      value={gallerySearchQuery}
+                      onChange={(e) => setGallerySearchQuery(e.target.value)}
+                      className="pl-10 bg-white/5 border-white/10 text-white text-xs rounded-xl focus:border-cyan-400 w-full"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      id="admin-gallery-category-filter"
+                      value={galleryFilterCategory}
+                      onChange={(e) => setGalleryFilterCategory(e.target.value)}
+                      className="bg-white/5 border border-white/10 text-slate-300 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-cyan-400 w-full sm:w-auto"
+                    >
+                      <option value="all" className="bg-[#0b1126] text-white">All Categories ({galleryList.length})</option>
+                      {galleryCategories.map((cat) => (
+                        <option key={cat} value={cat} className="bg-[#0b1126] text-white">
+                          {cat} ({galleryList.filter((i) => i.category === cat).length})
+                        </option>
+                      ))}
+                    </select>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={loadGalleryData}
+                      disabled={loadingGallery}
+                      className="bg-white/5 hover:bg-white/10 text-slate-300 border-white/10 text-xs rounded-xl"
+                      title="Refresh gallery collection"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingGallery ? "animate-spin" : ""}`} />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Gallery Items Grid */}
+                {filteredGalleryItems.length === 0 ? (
+                  <div className="text-center py-16 p-8 rounded-3xl bg-white/[0.02] border border-white/10 space-y-3">
+                    <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto">
+                      <ImageIcon className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white">No Gallery Photographs Found</h3>
+                    <p className="text-sm text-slate-400 max-w-md mx-auto">
+                      {gallerySearchQuery || galleryFilterCategory !== "all"
+                        ? "No images match your current search or category filter."
+                        : "No photographs have been uploaded yet. Use the upload form on the left to add your first photo!"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[750px] overflow-y-auto pr-1">
+                    {filteredGalleryItems.map((item) => (
+                      <div
+                        key={item._id}
+                        className="group rounded-2xl bg-[#090e21]/90 border border-white/10 hover:border-cyan-500/40 transition-all p-3 space-y-2.5 shadow-lg flex flex-col justify-between"
+                      >
+                        <div className="space-y-2">
+                          <div className="relative aspect-video rounded-xl overflow-hidden bg-black/60 border border-white/10 group-hover:border-cyan-400/30 transition-colors">
+                            <img
+                              src={item.img_url}
+                              alt={item.name || "Gallery photograph"}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                            <div className="absolute top-2 left-2">
+                              <Badge className="bg-[#0b1126]/90 backdrop-blur-md text-cyan-300 border-cyan-500/40 text-[10px] font-mono shadow">
+                                {item.category}
+                              </Badge>
+                            </div>
+                            <a
+                              href={item.img_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 text-slate-300 hover:text-white hover:bg-black/90 transition-all border border-white/20"
+                              title="Open image in new tab"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+
+                          <div className="space-y-1 px-1">
+                            <h4 className="text-sm font-bold text-white truncate font-space">
+                              {item.name || "Untitled Photograph"}
+                            </h4>
+                            {item.description && (
+                              <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-500 px-1">
+                          <span className="truncate max-w-[180px]">ID: {item._id}</span>
+                          <span className="text-emerald-400/80">Active in Public Gallery</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

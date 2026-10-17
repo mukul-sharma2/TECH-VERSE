@@ -157,4 +157,6 @@ module.exports = {
   login,
   verify,
   verifyAdminToken,
+  createAdminToken,
 };
+

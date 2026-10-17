@@ -9,3 +9,4 @@ router.post('/login', AdminController.login);
 router.get('/verify', AdminController.verify);
 
 module.exports = router;
+
