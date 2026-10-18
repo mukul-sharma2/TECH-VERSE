@@ -211,55 +211,49 @@ useEffect(() => {
 
       {/* Honorable Authorities Section */}
       <section className="py-10 -mt-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-              Honorable Authorities
-            </h2>
-          </div>
+  <div className="container mx-auto px-4">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+        Honorable Authorities
+      </h2>
+    </div>
 
-          <div className="flex flex-col items-center gap-14">
-            {/* ✅ FIX: grid-cols-2 for mobile, lg:grid-cols-3 for desktop */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 md:gap-12 lg:gap-x-40 justify-items-center">
-              {aboutUs.slice(0, 3).map((member, index) => (
-                  // ✅ FIX: Logic to center the 3rd card on mobile (lg:col-span-1 resets it for desktop)
-                  <div key={member._id || index} className={index === 2 ? 'col-span-2 lg:col-span-1 flex justify-center' : 'flex justify-center'}>
-                    <MemberCard
-                      member={member}
-                      index={index}
-                      isFlipped={flippedIndex === index}
-                      handleMouseEnter={handleMouseEnter}
-                      handleMouseLeave={handleMouseLeave}
-                    />
-                  </div>
-              ))}
-            </div>
-
-            {/* ✅ FIX: grid-cols-2 for mobile, lg:grid-cols-5 for desktop */}
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 md:gap-12 lg:gap-x-16 justify-items-center ">
-              {aboutUs.slice(3).map((member, index) => {
-                const actualIndex = index + 3;
-                const sliceLength = aboutUs.slice(3).length;
-                // Check if this is the last item AND if the total number of items in this slice is odd
-                const isLastItemAndOdd = (index === sliceLength - 1) && (sliceLength % 2 !== 0);
-                
-                return (
-                  // ✅ FIX: Logic to center the last card on mobile if count is odd (md: and lg: reset it for desktop)
-                  <div key={member._id || actualIndex} className={isLastItemAndOdd ? 'col-span-2 md:col-span-1 lg:col-span-1 flex justify-center' : 'flex justify-center'}>
-                    <MemberCard
-                      member={member}
-                      index={actualIndex}
-                      isFlipped={flippedIndex === actualIndex}
-                      handleMouseEnter={handleMouseEnter}
-                      handleMouseLeave={handleMouseLeave}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+    <div className="flex flex-col items-center gap-14">
+      {/* Top row: 2 per row on mobile, 3 on desktop */}
+      <div className="flex flex-wrap justify-center gap-4 md:gap-12 lg:gap-x-40">
+        {aboutUs.slice(0, 3).map((member, index) => (
+          <div key={member._id || index} className="flex justify-center">
+            <MemberCard
+              member={member}
+              index={index}
+              isFlipped={flippedIndex === index}
+              handleMouseEnter={handleMouseEnter}
+              handleMouseLeave={handleMouseLeave}
+            />
           </div>
-        </div>
-      </section>
+        ))}
+      </div>
+
+      {/* Remaining members: wraps and centers automatically */}
+      <div className="flex flex-wrap justify-center gap-4 md:gap-12 lg:gap-x-16">
+        {aboutUs.slice(3).map((member, index) => {
+          const actualIndex = index + 3;
+          return (
+            <div key={member._id || actualIndex} className="flex justify-center">
+              <MemberCard
+                member={member}
+                index={actualIndex}
+                isFlipped={flippedIndex === actualIndex}
+                handleMouseEnter={handleMouseEnter}
+                handleMouseLeave={handleMouseLeave}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* Mentors Section */}
       <section className="py-20 bg-white">
