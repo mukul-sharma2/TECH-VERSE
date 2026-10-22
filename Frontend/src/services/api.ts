@@ -277,6 +277,53 @@ export const registerTeam = async (submissionData: any) => {
   }
 };
 
+export interface LostCodeMemberPayload {
+  name: string;
+  regNo: string;
+  course: string;
+  year: string;
+  phone: string;
+  email: string;
+  role?: string;
+}
+
+export interface LostCodeRegistrationPayload {
+  teamName?: string;
+  teamSize: number;
+  members: LostCodeMemberPayload[];
+}
+
+export const registerLostCodeTeam = async (submissionData: LostCodeRegistrationPayload) => {
+  const url = `${API_BASE_URL}/api/lost-code/register`;
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(submissionData),
+    });
+
+    let data: { message?: string; errors?: Array<{ message: string }> } = {};
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+
+    if (!response.ok) {
+      const error = new ApiError(data.message || 'Lost Code registration failed. Please try again.', response.status, data);
+      (error as unknown as { response: { data: unknown } }).response = { data };
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error registering Lost Code team:', error);
+    throw error;
+  }
+};
+
 export const registerCodeCrafterTeam = async (submissionData: FormData | any) => {
   const isFormData = submissionData instanceof FormData;
   const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
