@@ -38,6 +38,16 @@ const EventPage = () => {
     registrationPath: "/events/codecrafter",
 
   },
+   {
+    title: "LOST CODE",
+    description: "A treasure hunt for coders, where participants solve coding puzzles to find hidden treasures.",
+    date: "29 october 2026",
+    location: "CT University, Punjab",
+    status: "upcoming" as const,
+    icon: Code,
+    registrationPath: "/events/lost-code",
+
+  },
   {
     title: "Engineers Day",
     description: "Participate in 12 exciting competitions across tech, gaming, design, and core engineering. Free entry for all students!",

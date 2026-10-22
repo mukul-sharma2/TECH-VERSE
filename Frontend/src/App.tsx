@@ -72,7 +72,7 @@ const AppContent: React.FC = () => {
         <Route path="*" element={<NotFound />} />
         <Route path="/events/engineersday" element={<EngineersDay/>} />
         <Route path="/admin" element={<AdminPortal />} />
-        <Route path="/lost-code" element={<LostCodeRegistration />} />
+        <Route path="/events/lost-code" element={<LostCodeRegistration />} />
       </Routes>
       {location.pathname !== '/codecrafter' && <Footer />}
     </>
