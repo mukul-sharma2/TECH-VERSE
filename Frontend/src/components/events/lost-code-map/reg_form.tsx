@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent, FormEvent, CSSProperties } from 'react';
-import { Link, useHref } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   Compass, 
   Users, 
@@ -12,11 +12,17 @@ import {
   CheckCircle2, 
   AlertCircle,
   Loader2,
-  Dices
+  Dices,
+  UploadCloud,
+  X,
+  FileCheck,
+  CreditCard,
+  Coins
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { registerLostCodeTeam } from '@/services/api';
 import lostCodeMapBg from './img/lost-code-map.jpeg';
+import whatsappIcon from './img/whatsapp.png';
 
 // --- TypeScript Interfaces ---
 export interface TeamMember {
@@ -55,6 +61,11 @@ export const LostCodeRegistration: React.FC = () => {
     teamSize: '3',
     members: [emptyMember(), emptyMember(), emptyMember()],
   });
+
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [paymentPreview, setPaymentPreview] = useState<string | null>(null);
+  const [transactionId, setTransactionId] = useState<string>('');
+  const [qrRevealed, setQrRevealed] = useState<boolean>(false);
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitted, setSubmitted] = useState<boolean>(false);
@@ -97,35 +108,76 @@ export const LostCodeRegistration: React.FC = () => {
     });
   };
 
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Only image files (JPG, PNG, WEBP) are allowed for payment screenshot.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Payment screenshot must be smaller than 5MB.');
+      return;
+    }
+
+    setErrorMessage(null);
+    setPaymentFile(file);
+    if (paymentPreview) {
+      URL.revokeObjectURL(paymentPreview);
+    }
+    setPaymentPreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveFile = () => {
+    if (paymentPreview) {
+      URL.revokeObjectURL(paymentPreview);
+    }
+    setPaymentFile(null);
+    setPaymentPreview(null);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    if (!paymentFile) {
+      setErrorMessage('Please upload your payment screenshot before submitting!');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      
       const leadName = formData.members[0]?.name?.trim() || 'Explorer';
       const cleanLead = leadName.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') || 'Crew';
       const randomId = Math.floor(1000 + Math.random() * 9000);
       const allocatedPlaceholder = `LostCode-${cleanLead}-${randomId}`;
 
-      const payload = {
-        teamName: allocatedPlaceholder,
-        teamSize: parseInt(formData.teamSize, 10),
-        members: formData.members.map((m, idx) => ({
-          name: m.name.trim(),
-          regNo: m.regNo.trim(),
-          course: m.course.trim(),
-          year: m.year.trim(),
-          phone: m.phone.trim(),
-          email: m.email.trim(),
-          role: idx === 0 ? 'Captain' : idx === 1 ? 'Navigator' : idx === 2 ? 'Chronicler' : 'Cipher Master',
-        })),
-      };
+      const formDataObj = new FormData();
+      formDataObj.append('teamName', allocatedPlaceholder);
+      formDataObj.append('teamSize', String(formData.teamSize));
+      formDataObj.append('transactionId', transactionId.trim());
+      formDataObj.append('qrViewed', String(qrRevealed));
+      formDataObj.append('paymentScreenshot', paymentFile);
+      formDataObj.append(
+        'members',
+        JSON.stringify(
+          formData.members.map((m, idx) => ({
+            name: m.name.trim(),
+            regNo: m.regNo.trim(),
+            course: m.course.trim(),
+            year: m.year.trim(),
+            phone: m.phone.trim(),
+            email: m.email.trim(),
+            role: idx === 0 ? 'Captain' : idx === 1 ? 'Navigator' : idx === 2 ? 'Chronicler' : 'Cipher Master',
+          }))
+        )
+      );
 
-      await registerLostCodeTeam(payload);
+      await registerLostCodeTeam(formDataObj);
 
-      
       try {
         confetti({
           particleCount: 100,
@@ -133,7 +185,7 @@ export const LostCodeRegistration: React.FC = () => {
           origin: { y: 0.5 },
           colors: ['#D4AF37', '#FFD700', '#8B1E13', '#EED2A4', '#5C3217'],
         });
-      } catch (err) {
+      } catch {
         // Ignore confetti failure if canvas isn't supported
       }
 
@@ -169,14 +221,22 @@ export const LostCodeRegistration: React.FC = () => {
       teamSize: '3',
       members: [emptyMember(), emptyMember(), emptyMember()],
     });
+    if (paymentPreview) {
+      URL.revokeObjectURL(paymentPreview);
+    }
+    setPaymentFile(null);
+    setPaymentPreview(null);
+    setTransactionId('');
     setSubmitted(false);
     setErrorMessage(null);
+    setQrRevealed(false);
   };
 
   // --- Aesthetic Pirate Parchment Styles ---
   const styles: Record<string, CSSProperties> = {
     viewport: {
       position: 'relative',
+      top:'70px',
       minHeight: '100vh',
       width: '100%',
       backgroundColor: '#0c0704',
@@ -591,7 +651,7 @@ export const LostCodeRegistration: React.FC = () => {
                 marginBottom: '20px',
               }}
             >
-              Your crew manifest has been logged into the treasure logs! Your official
+              Your crew manifest and payment verification have been logged into the treasure logs! Your official
               team name and mission battle station will be <strong>randomly allocated at the venue check-in desk</strong> upon arrival.
             </p>
 
@@ -637,22 +697,27 @@ export const LostCodeRegistration: React.FC = () => {
                 REGISTER ANOTHER CREW
               </button>
               
+              {/* Working WhatsApp Button */}
+              <a
+                href="https://chat.whatsapp.com/BUGqwklPNKD5CK3skqPGnn"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  ...styles.submitBtn,
+                  background: 'linear-gradient(180deg, #1e7e34 0%, #155724 100%)',
+                  border: '2.5px solid #25D366',
+                  color: '#FFFFFF',
+                  textDecoration: 'none',
+                }}
+              >
+                <img
+                  src={whatsappIcon}
+                  alt="WhatsApp"
+                  style={{ width: '22px', height: '22px', objectFit: 'contain' }}
+                />
+                <span>JOIN OUR WHATSAPP GROUP</span>
+              </a>
 
-               <button
-  type="button"
-  style={styles.submitBtn}
-  onClick={() =>
-    window.open(
-      'https://chat.whatsapp.com/BUGqwklPNKD5CK3skqPGnn',
-      '_blank',
-      'noopener,noreferrer'
-    )
-  }
->
-
-  <img src="\img\whatsapp.png" alt="WhatsApp" style={{ width: '20px', height: '20px' }} />
-  JOIN OUR WHATSAPP GROUP
-</button>
               <Link
                 to="/events"
                 style={{
@@ -667,6 +732,95 @@ export const LostCodeRegistration: React.FC = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
+            {/* About Lost Code Event Description Card */}
+            <div
+              style={{
+                ...styles.card,
+                backgroundColor: 'rgba(247, 233, 207, 0.96)',
+                border: '2px solid #5C3217',
+                borderRadius: '12px',
+                padding: '24px 24px',
+                marginBottom: '26px',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '8px',
+                }}
+              >
+                <Compass size={24} style={{ color: '#8B1E13' }} />
+                <h2
+                  style={{
+                    fontFamily: "'Pirata One', 'Cinzel', serif",
+                    fontSize: '2rem',
+                    color: '#3B1206',
+                    letterSpacing: '2px',
+                    margin: 0,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  ABOUT LOST CODE
+                </h2>
+              </div>
+
+              <div
+                style={{
+                  display: 'inline-block',
+                  color: '#8B1E13',
+                  fontFamily: "'Cinzel', serif",
+                  fontWeight: 900,
+                  fontSize: '0.95rem',
+                  letterSpacing: '2.5px',
+                  textTransform: 'uppercase',
+                  marginBottom: '14px',
+                }}
+              >
+                Think. Decode. Explore.
+              </div>
+
+              <div
+                style={{
+                  color: '#4A2610',
+                  fontSize: '0.95rem',
+                  lineHeight: '1.7',
+                  fontWeight: 600,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                }}
+              >
+                <p style={{ margin: 0 }}>
+                  Lost Code is an <strong>OSINT-themed treasure hunt</strong> that transforms your campus into a world of hidden clues, cryptic riddles, and exciting discoveries.
+                </p>
+                <p style={{ margin: 0 }}>
+                  Across multiple rounds, teams must solve puzzles, decode hints, and physically explore campus corridors, laboratories, and rooms to uncover hidden flags. Every clue leads to a new destination, testing your observation, logical thinking, teamwork, and problem-solving skills.
+                </p>
+                <p style={{ margin: 0 }}>
+                  The mission is simple: <em>follow the trail, crack the code, and race to the ultimate treasure.</em>
+                </p>
+                <div
+                  style={{
+                    marginTop: '4px',
+                    padding: '12px 18px',
+                    backgroundColor: 'rgba(139, 30, 19, 0.08)',
+                    borderLeft: '4px solid #8B1E13',
+                    borderRadius: '6px',
+                    color: '#3B1206',
+                    fontStyle: 'italic',
+                    fontWeight: 800,
+                    fontSize: '1.02rem',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  ☠️ "Can you find what others can’t?"
+                </div>
+              </div>
+            </div>
+
             {/* 1. Expedition Setup (Crew Size & Random Venue Allocation Notice) */}
             <div style={styles.card}>
               <div
@@ -693,7 +847,7 @@ export const LostCodeRegistration: React.FC = () => {
                     }}
                   >
                     🎲 <strong>Random Team Allocation:</strong> Team names and mystery callsigns
-                    are automatically assigned at the venue 
+                    are automatically assigned at the venue check-in desk.
                   </p>
                 </div>
 
@@ -833,7 +987,7 @@ export const LostCodeRegistration: React.FC = () => {
                           style={styles.select}
                         >
                           <option value="">Select</option>
-                          <option value="2nd Year">1st Year</option>
+                          <option value="1st Year">1st Year</option>
                           <option value="2nd Year">2nd Year</option>
                           <option value="3rd Year">3rd Year</option>
                           <option value="4th Year">4th Year</option>
@@ -873,6 +1027,272 @@ export const LostCodeRegistration: React.FC = () => {
               })}
             </div>
 
+            {/* 3. Treasure Tribute & Payment Verification */}
+            <div style={styles.card}>
+              <h2 style={styles.sectionTitle}>
+                <Coins size={22} style={{ color: '#8B1E13' }} />
+                <span>3. Treasure Tribute & Payment Verification</span>
+              </h2>
+              <p
+                style={{
+                  margin: '0 0 16px 0',
+                  fontSize: '0.9rem',
+                  color: '#5A2E13',
+                  fontWeight: 600,
+                  lineHeight: '1.5',
+                }}
+              >
+                Scan the official UPI QR code below, complete your crew's registration payment, and upload the payment receipt screenshot to secure your entry.
+              </p>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '24px',
+                  alignItems: 'start',
+                }}
+              >
+                {/* Left Column: QR Code Display */}
+                <div
+                  style={{
+                    backgroundColor: 'rgba(255, 248, 235, 0.85)',
+                    border: '2px solid #8C5228',
+                    borderRadius: '10px',
+                    padding: '16px',
+                    textAlign: 'center',
+                    boxShadow: 'inset 0 0 15px rgba(110, 55, 18, 0.1)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      color: '#3B1206',
+                      fontSize: '0.88rem',
+                      marginBottom: '10px',
+                      letterSpacing: '1px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Official UPI QR Code
+                  </div>
+
+                  {/* Blurred QR — click to reveal */}
+                  <div
+                    onClick={() => setQrRevealed(true)}
+                    style={{
+                      position: 'relative',
+                      maxWidth: '220px',
+                      margin: '0 auto 10px auto',
+                      cursor: qrRevealed ? 'default' : 'pointer',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      border: '1.5px solid #D4AF37',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    <img
+                      src="/payment_qr.jpeg"
+                      alt="Payment QR Code"
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        display: 'block',
+                        borderRadius: '6px',
+                        filter: qrRevealed ? 'none' : 'blur(10px)',
+                        transition: 'filter 0.35s ease',
+                        transform: qrRevealed ? 'scale(1)' : 'scale(1.04)',
+                        transformOrigin: 'center',
+                      }}
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                    {/* Overlay prompt visible only when blurred */}
+                    {!qrRevealed && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          background: 'rgba(42, 20, 8, 0.45)',
+                          borderRadius: '6px',
+                        }}
+                      >
+                        <span style={{ fontSize: '1.8rem' }}>👁️</span>
+                        <span
+                          style={{
+                            color: '#FFE8BD',
+                            fontWeight: 900,
+                            fontSize: '0.82rem',
+                            letterSpacing: '1px',
+                            textTransform: 'uppercase',
+                            textShadow: '0 1px 4px #000',
+                          }}
+                        >
+                          Tap to reveal QR
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: '0.8rem', color: '#6A3816', fontWeight: 800 }}>
+                    {qrRevealed
+                      ? 'Scan with GPay, PhonePe, Paytm, or any UPI App'
+                      : 'Click the QR code above to reveal'}
+                  </div>
+
+                  {qrRevealed && (
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginTop: '10px',
+                        padding: '4px 12px',
+                        backgroundColor: 'rgba(27, 94, 32, 0.12)',
+                        border: '1.5px solid #2e7d32',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        fontWeight: 900,
+                        color: '#1b5e20',
+                        letterSpacing: '0.8px',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      <CheckCircle2 size={13} />
+                      QR Viewed ✓
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column: Screenshot Upload & Transaction ID */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* File Upload Box */}
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.label}>
+                      <UploadCloud size={14} />
+                      <span>Payment Receipt Screenshot *</span>
+                    </label>
+
+                    {!paymentPreview ? (
+                      <label
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '10px',
+                          padding: '24px 16px',
+                          backgroundColor: 'rgba(255, 248, 235, 0.95)',
+                          border: '2px dashed #8C5228',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <UploadCloud size={34} style={{ color: '#8B1E13' }} />
+                        <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#3B1206' }}>
+                          Click to Choose Payment Screenshot
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#7A401A', fontWeight: 600 }}>
+                          PNG, JPG, or WEBP (Max 5MB)
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          required
+                          onChange={handleFileChange}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    ) : (
+                      <div
+                        style={{
+                          position: 'relative',
+                          backgroundColor: 'rgba(255, 248, 235, 0.95)',
+                          border: '2px solid #5C3217',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <img
+                          src={paymentPreview}
+                          alt="Payment Screenshot Preview"
+                          style={{
+                            maxHeight: '170px',
+                            maxWidth: '100%',
+                            objectFit: 'contain',
+                            borderRadius: '6px',
+                            margin: '0 auto 8px auto',
+                            display: 'block',
+                          }}
+                        />
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            fontSize: '0.85rem',
+                            fontWeight: 800,
+                            color: '#2A1408',
+                          }}
+                        >
+                          <FileCheck size={16} style={{ color: '#1b5e20' }} />
+                          <span>
+                            {paymentFile?.name} ({(paymentFile?.size ? (paymentFile.size / 1024).toFixed(1) : 0)} KB)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveFile}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginTop: '8px',
+                            padding: '6px 14px',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            color: '#FFE8BD',
+                            backgroundColor: '#8B1E13',
+                            border: '1px solid #D4AF37',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <X size={14} />
+                          <span>Change Screenshot</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Transaction ID / UTR Input */}
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.label}>
+                      <CreditCard size={14} />
+                      <span>Transaction ID / UTR No. (Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 12-digit UPI Reference / UTR Number"
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      style={styles.input}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Submit Expedition Roster */}
             <div style={styles.submitContainer}>
               <button
@@ -887,7 +1307,7 @@ export const LostCodeRegistration: React.FC = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 size={24} className="animate-spin" />
-                    <span>CHARTERING YOUR CREW...</span>
+                    <span>CHARTERING YOUR CREW & UPLOADING...</span>
                   </>
                 ) : (
                   <>
@@ -903,5 +1323,6 @@ export const LostCodeRegistration: React.FC = () => {
     </div>
   );
 };
+
 
 export default LostCodeRegistration;

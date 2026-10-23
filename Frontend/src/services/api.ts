@@ -291,17 +291,19 @@ export interface LostCodeRegistrationPayload {
   teamName?: string;
   teamSize: number;
   members: LostCodeMemberPayload[];
+  transactionId?: string;
+  paymentScreenshot?: string;
 }
 
-export const registerLostCodeTeam = async (submissionData: LostCodeRegistrationPayload) => {
+export const registerLostCodeTeam = async (submissionData: FormData | LostCodeRegistrationPayload) => {
+  const isFormData = submissionData instanceof FormData;
+  const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
   const url = `${API_BASE_URL}/api/lost-code/register`;
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(submissionData),
+      headers,
+      body: isFormData ? submissionData : JSON.stringify(submissionData),
     });
 
     let data: { message?: string; errors?: Array<{ message: string }> } = {};

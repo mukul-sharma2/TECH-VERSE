@@ -1,10 +1,25 @@
 const LostCodeRegistration = require("../models/LostCodeRegistration");
+const cloudinary = require("../config/cloudinary");
 const { Parser } = require("json2csv");
+
+const uploadToCloudinary = (buffer, folder = 'lostcode_payments') => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: folder },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+    uploadStream.end(buffer);
+  });
+};
 
 const registerLostCodeTeam = async (req, res) => {
   try {
-    const { teamSize, members } = req.body;
+    const { teamSize, members, transactionId } = req.body;
     let teamName = req.body.teamName;
+    const qrViewed = req.body.qrViewed === 'true' || req.body.qrViewed === true;
 
     if (!teamName || typeof teamName !== 'string' || teamName.trim() === '') {
       const leaderName = members?.[0]?.name ? members[0].name.trim().split(' ')[0] : 'Crew';
@@ -13,9 +28,24 @@ const registerLostCodeTeam = async (req, res) => {
       teamName = `LostCode-${cleanLeader}-${randomSuffix}`;
     }
 
+    let paymentScreenshot = req.body.paymentScreenshot || '';
+    if (req.file) {
+      try {
+        paymentScreenshot = await uploadToCloudinary(req.file.buffer, 'lostcode_payments');
+      } catch (uploadError) {
+        console.error("Cloudinary Upload Error for Lost Code:", uploadError);
+        return res.status(500).json({
+          message: "Failed to upload payment screenshot to Cloudinary. Please try again.",
+        });
+      }
+    }
+
     const registration = new LostCodeRegistration({
       teamName: teamName.trim(),
       teamSize: Number(teamSize),
+      paymentScreenshot,
+      transactionId: transactionId ? transactionId.trim() : '',
+      qrViewed,
       members: members.map((m, idx) => ({
         name: m.name.trim(),
         regNo: m.regNo.trim(),
@@ -68,6 +98,9 @@ const getLostCodeCSV = async (req, res) => {
         flattened.push({
           teamName: reg.teamName,
           teamSize: reg.teamSize,
+          transactionId: reg.transactionId || '',
+          paymentScreenshot: reg.paymentScreenshot || '',
+          qrViewed: reg.qrViewed ? 'Yes' : 'No',
           registeredAt: reg.createdAt,
           memberIndex: idx + 1,
           role: m.role || (idx === 0 ? 'Captain' : 'Crew'),
@@ -97,4 +130,3 @@ module.exports = {
   getLostCodeRegistrations,
   getLostCodeCSV,
 };
-

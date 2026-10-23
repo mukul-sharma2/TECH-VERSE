@@ -32,9 +32,11 @@ const LostCodeValidationSchema = Joi.object({
     'array.min': 'At least 3 members are required.',
     'array.max': 'At most 4 members are allowed.',
   }),
+  transactionId: Joi.string().trim().optional().allow(''),
+  paymentScreenshot: Joi.string().optional().allow(''),
+  qrViewed: Joi.boolean().optional(),
 });
 
 module.exports = {
   LostCodeValidationSchema,
 };
-

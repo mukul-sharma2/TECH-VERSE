@@ -14,6 +14,9 @@ const LostCodeRegistrationSchema = new mongoose.Schema({
   teamName: { type: String, required: true },
   teamSize: { type: Number, required: true },
   members: { type: [LostCodeMemberSchema], required: true },
+  paymentScreenshot: { type: String, default: "" },
+  transactionId: { type: String, default: "" },
+  qrViewed: { type: Boolean, default: false },
   status: { type: String, default: "Registered" },
   createdAt: { type: Date, default: Date.now },
 });
@@ -24,4 +27,3 @@ module.exports = mongoose.model(
   LostCodeRegistrationSchema, 
   "lostcode_registrations"
 );
-
