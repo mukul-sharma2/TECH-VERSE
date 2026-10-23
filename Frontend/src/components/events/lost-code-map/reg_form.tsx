@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent, FormEvent, CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useHref } from 'react-router-dom';
 import { 
   Compass, 
   Users, 
@@ -636,6 +636,22 @@ export const LostCodeRegistration: React.FC = () => {
                 <Sparkles size={20} />
                 REGISTER ANOTHER CREW
               </button>
+              
+
+               <button
+  type="button"
+  style={styles.submitBtn}
+  onClick={() =>
+    window.open(
+      'https://chat.whatsapp.com/BUGqwklPNKD5CK3skqPGnn',
+      '_blank',
+      'noopener,noreferrer'
+    )
+  }
+>
+  <image src="img/whatsapp.png" alt="WhatsApp" style={{ width: '20px', height: '20px' }} />
+  JOIN OUR WHATSAPP GROUP
+</button>
               <Link
                 to="/events"
                 style={{
