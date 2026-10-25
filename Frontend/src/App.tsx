@@ -21,6 +21,7 @@ import Loading from "./components/Loading";
 import Register from "./components/Register"
 import CodeCrafter from "./pages/CodeCrafter";
 import AdminPortal from "./pages/AdminPortal";
+import LostCodeRegistration from "./components/events/lost-code-map/reg_form";
 
 
 const queryClient = new QueryClient();
@@ -71,7 +72,7 @@ const AppContent: React.FC = () => {
         <Route path="*" element={<NotFound />} />
         <Route path="/events/engineersday" element={<EngineersDay/>} />
         <Route path="/admin" element={<AdminPortal />} />
-
+        <Route path="/events/lost-code" element={<LostCodeRegistration />} />
       </Routes>
       {location.pathname !== '/codecrafter' && <Footer />}
     </>

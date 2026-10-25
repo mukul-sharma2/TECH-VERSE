@@ -97,6 +97,7 @@ app.use('/api/mentors', require('./routes/Mentor'));
 app.use('/api/admin', require('./routes/AdminRoute'));
 app.use('/api/club-members', require('./routes/ClubMemberServer'));
 app.use('/api/register', require('./routes/RegistrationServer'));
+app.use('/api/lost-code', require('./routes/LostCodeRegistrationRoute'));
 app.use('/api/codecrafter-register', require('./routes/CodeCrafterRegistrationServer'));
 app.use('/api/robomech-register', require('./routes/RoboMechRegistrationServer'));
 app.use('/api/engineers-day', require('./routes/EngineersDayRoute'));

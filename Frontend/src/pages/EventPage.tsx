@@ -38,6 +38,16 @@ const EventPage = () => {
     registrationPath: "/events/codecrafter",
 
   },
+   {
+    title: "LOST CODE",
+    description: "A treasure hunt for coders, where participants solve coding puzzles to find hidden treasures.",
+    date: "29 october 2026",
+    location: "CT University, Punjab",
+    status: "upcoming" as const,
+    icon: Code,
+    registrationPath: "/events/lost-code",
+
+  },
   {
     title: "Engineers Day",
     description: "Participate in 12 exciting competitions across tech, gaming, design, and core engineering. Free entry for all students!",
@@ -133,7 +143,9 @@ const EventPage = () => {
 
   {/* Title */}
   <h1 className="text-6xl md:text-8xl font-bold font-space bg-gradient-to-r from-[#6EE7B7] via-[#3B82F6] to-[#9333EA] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(147,51,234,0.6)] leading-[1.15] mt-8">
-    New event in process stay tuned
+    Checkout new events and competitions
+  </h1>
+  <h1 className="text-2xl md:text-3xl font-semibold text-white/90 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] leading-snug">
   </h1>
 
   
@@ -177,7 +189,7 @@ const EventPage = () => {
               {/* Mapping to prevent writing the same span multiple times in source */}
               {[...Array(4)].map((_, i) => (
                 <span key={i} className="text-blue-300 font-semibold text-sm md:text-base whitespace-nowrap">
-                  Techverse hiring in progress
+                  Techverse hiring | Lost code
                 </span>
               ))}
             </div>
