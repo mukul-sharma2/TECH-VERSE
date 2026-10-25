@@ -213,9 +213,11 @@ const Home = () => {
               {/* Mapping to prevent writing the same span multiple times in source */}
               {[...Array(4)].map((_, i) => (
                 <span key={i} className="text-blue-300 font-semibold text-sm md:text-base whitespace-nowrap">
-                  Techverse hiring in progress
+                   Techverse hiring | Lost code
                 </span>
+                
               ))}
+              
             </div>
           ))}
         </div>
