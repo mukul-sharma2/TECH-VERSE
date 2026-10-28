@@ -14,7 +14,8 @@ import {
   Loader2,
   Dices,
   MapPin,
-  Coins
+  Coins,
+  Lock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { registerLostCodeTeam } from '@/services/api';
@@ -59,12 +60,14 @@ export const LostCodeRegistration: React.FC = () => {
     members: [emptyMember(), emptyMember(), emptyMember()],
   });
 
+  const isRegistrationsClosed = true;
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // --- Handlers ---
   const handleTeamSizeChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    if (isRegistrationsClosed) return;
     const newSize = e.target.value as '3' | '4';
     const targetCount = parseInt(newSize, 10);
 
@@ -90,6 +93,7 @@ export const LostCodeRegistration: React.FC = () => {
     field: keyof TeamMember,
     value: string
   ) => {
+    if (isRegistrationsClosed) return;
     setFormData((prev) => {
       const updatedMembers = [...prev.members];
       updatedMembers[index] = {
@@ -102,6 +106,9 @@ export const LostCodeRegistration: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isRegistrationsClosed) {
+      return;
+    }
     setErrorMessage(null);
     setIsSubmitting(true);
 
@@ -302,12 +309,12 @@ export const LostCodeRegistration: React.FC = () => {
       background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)',
     },
     card: {
-      backgroundColor: 'rgba(247, 233, 207, 0.94)',
-      border: '2px solid #5C3217',
+      backgroundColor: 'rgba(255, 250, 240, 0.78)',
+      border: '2px solid rgba(140, 82, 40, 0.4)',
       borderRadius: '12px',
       padding: '22px 20px',
       boxShadow:
-        '0 12px 30px rgba(0,0,0,0.6), inset 0 0 40px rgba(110, 55, 18, 0.16)',
+        '0 8px 24px rgba(0,0,0,0.3), inset 0 0 30px rgba(110, 55, 18, 0.08)',
       marginBottom: '26px',
       position: 'relative',
       backdropFilter: 'blur(3px)',
@@ -349,31 +356,32 @@ export const LostCodeRegistration: React.FC = () => {
       maxWidth: '100%',
       boxSizing: 'border-box',
       padding: '10px 12px',
-      backgroundColor: 'rgba(255, 248, 235, 0.95)',
-      border: '1.5px solid #8C5228',
+      backgroundColor: 'rgba(255, 255, 255, 0.7)',
+      border: '1.5px solid rgba(140, 82, 40, 0.3)',
       borderRadius: '6px',
-      color: '#2A1408',
+      color: '#6E4D36',
       fontWeight: 700,
       fontSize: '0.92rem',
       outline: 'none',
-      boxShadow: 'inset 0 1px 3px rgba(74, 38, 16, 0.1)',
+      boxShadow: 'inset 0 1px 3px rgba(74, 38, 16, 0.05)',
       transition: 'border-color 0.2s, box-shadow 0.2s',
       fontFamily: "'Georgia', 'Times New Roman', serif",
+      cursor: 'not-allowed',
     },
     select: {
       width: '100%',
       maxWidth: '100%',
       boxSizing: 'border-box',
       padding: '10px 10px',
-      backgroundColor: 'rgba(255, 248, 235, 0.95)',
-      border: '1.5px solid #8C5228',
+      backgroundColor: 'rgba(255, 255, 255, 0.7)',
+      border: '1.5px solid rgba(140, 82, 40, 0.3)',
       borderRadius: '6px',
-      color: '#2A1408',
+      color: '#6E4D36',
       fontWeight: 800,
       fontSize: '0.88rem',
       outline: 'none',
-      cursor: 'pointer',
-      boxShadow: 'inset 0 1px 3px rgba(74, 38, 16, 0.1)',
+      cursor: 'not-allowed',
+      boxShadow: 'inset 0 1px 3px rgba(74, 38, 16, 0.05)',
       fontFamily: "'Cinzel', serif",
     },
     gridMembers: {
@@ -384,12 +392,12 @@ export const LostCodeRegistration: React.FC = () => {
       boxSizing: 'border-box',
     },
     memberCard: {
-      backgroundColor: 'rgba(247, 233, 207, 0.93)',
-      border: '2px solid #5C3217',
+      backgroundColor: 'rgba(255, 250, 240, 0.75)',
+      border: '1.5px solid rgba(92, 50, 23, 0.35)',
       borderRadius: '10px',
       padding: '18px 16px',
       boxShadow:
-        '0 8px 24px rgba(0,0,0,0.5), inset 0 0 35px rgba(110, 55, 18, 0.14)',
+        '0 6px 18px rgba(0,0,0,0.25), inset 0 0 25px rgba(110, 55, 18, 0.06)',
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
@@ -780,52 +788,95 @@ export const LostCodeRegistration: React.FC = () => {
               </div>
             </div>
 
-            {/* 1. Expedition Setup (Crew Size & Random Venue Allocation Notice) */}
-            <div style={styles.card}>
-              <div
+            {/* Registration Closed Alert Banner */}
+            <div
+              style={{
+                backgroundColor: 'rgba(38, 17, 7, 0.92)',
+                border: '2px solid #8B1E13',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                marginBottom: '26px',
+                textAlign: 'center',
+                color: '#FFE8BD',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.6)',
+              }}
+            >
+              <Lock size={22} style={{ color: '#E53E3E', flexShrink: 0 }} />
+              <span
                 style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '16px',
+                  fontFamily: "'Cinzel', serif",
+                  fontWeight: 900,
+                  fontSize: '1.05rem',
+                  letterSpacing: '1.8px',
+                  textTransform: 'uppercase',
+                  color: '#FFDE8A',
                 }}
               >
-                <div style={{ flex: '1 1 300px' }}>
-                  <h2 style={styles.sectionTitle}>
-                    <Dices size={22} style={{ color: '#8B1E13' }} />
-                    <span>1. Expedition Setup & Venue Allocation</span>
-                  </h2>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '0.9rem',
-                      color: '#5A2E13',
-                      fontWeight: 700,
-                      lineHeight: '1.5',
-                    }}
-                  >
-                    🎲 <strong>Random Team Allocation:</strong> Team names and mystery callsigns
-                    are automatically assigned at the venue check-in desk.
-                  </p>
-                </div>
+                Registrations for Lost Code are Currently Closed
+              </span>
+            </div>
 
-                <div style={{ minWidth: '200px', flex: '0 1 240px' }}>
-                  <label style={styles.label}>
-                    <Users size={14} />
-                    <span>Crew Size *</span>
-                  </label>
-                  <select
-                    value={formData.teamSize}
-                    onChange={handleTeamSizeChange}
-                    style={styles.select}
-                  >
-                    <option value="3">3 Code Explorers</option>
-                    <option value="4">4 Code Explorers</option>
-                  </select>
+            {/* Blurred & Lightened Inactive Registration Form */}
+            <div
+              style={{
+                filter: 'blur(1.2px)',
+                opacity: 0.58,
+                pointerEvents: 'none',
+                userSelect: 'none',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              {/* 1. Expedition Setup (Crew Size & Random Venue Allocation Notice) */}
+              <div style={styles.card}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '16px',
+                  }}
+                >
+                  <div style={{ flex: '1 1 300px' }}>
+                    <h2 style={styles.sectionTitle}>
+                      <Dices size={22} style={{ color: '#8B1E13' }} />
+                      <span>1. Expedition Setup & Venue Allocation</span>
+                    </h2>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '0.9rem',
+                        color: '#5A2E13',
+                        fontWeight: 700,
+                        lineHeight: '1.5',
+                      }}
+                    >
+                      🎲 <strong>Random Team Allocation:</strong> Team names and mystery callsigns
+                      are automatically assigned at the venue check-in desk.
+                    </p>
+                  </div>
+
+                  <div style={{ minWidth: '200px', flex: '0 1 240px' }}>
+                    <label style={styles.label}>
+                      <Users size={14} />
+                      <span>Crew Size *</span>
+                    </label>
+                    <select
+                      disabled={true}
+                      value={formData.teamSize}
+                      onChange={handleTeamSizeChange}
+                      style={styles.select}
+                    >
+                      <option value="3">3 Code Explorers</option>
+                      <option value="4">4 Code Explorers</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
 
             {/* 2. Crew Member Profiles */}
             <div
@@ -888,6 +939,7 @@ export const LostCodeRegistration: React.FC = () => {
                       <label style={styles.label}>Registration No. *</label>
                       <input
                         type="text"
+                        disabled={true}
                         required
                         placeholder="e.g. 20241092"
                         value={member.regNo}
@@ -902,6 +954,7 @@ export const LostCodeRegistration: React.FC = () => {
                       <label style={styles.label}>Full Name *</label>
                       <input
                         type="text"
+                        disabled={true}
                         required
                         placeholder="Full Explorer Name"
                         value={member.name}
@@ -926,6 +979,7 @@ export const LostCodeRegistration: React.FC = () => {
                         <label style={styles.label}>Course *</label>
                         <input
                           type="text"
+                          disabled={true}
                           required
                           placeholder="e.g. B.Tech"
                           value={member.course}
@@ -938,6 +992,7 @@ export const LostCodeRegistration: React.FC = () => {
                       <div style={styles.fieldGroup}>
                         <label style={styles.label}>Year *</label>
                         <select
+                          disabled={true}
                           required
                           value={member.year}
                           onChange={(e) =>
@@ -958,6 +1013,7 @@ export const LostCodeRegistration: React.FC = () => {
                       <label style={styles.label}>Phone / WhatsApp *</label>
                       <input
                         type="tel"
+                        disabled={true}
                         required
                         placeholder="10-digit Phone"
                         value={member.phone}
@@ -972,6 +1028,7 @@ export const LostCodeRegistration: React.FC = () => {
                       <label style={styles.label}>University Email *</label>
                       <input
                         type="email"
+                        disabled={true}
                         required
                         placeholder="explorer@ctuniversity.in"
                         value={member.email}
@@ -995,11 +1052,11 @@ export const LostCodeRegistration: React.FC = () => {
 
               <div
                 style={{
-                  backgroundColor: 'rgba(255, 248, 235, 0.95)',
-                  border: '1.5px solid #8C5228',
+                  backgroundColor: 'rgba(255, 252, 245, 0.9)',
+                  border: '1.5px solid rgba(140, 82, 40, 0.4)',
                   borderRadius: '10px',
                   padding: '20px',
-                  boxShadow: 'inset 0 0 15px rgba(110, 55, 18, 0.08)',
+                  boxShadow: 'inset 0 0 15px rgba(110, 55, 18, 0.05)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '14px',
@@ -1056,30 +1113,38 @@ export const LostCodeRegistration: React.FC = () => {
                 </p>
               </div>
             </div>
+            </div>
 
-            {/* Submit Expedition Roster */}
+            {/* Submit Expedition Roster (Disabled) */}
             <div style={styles.submitContainer}>
               <button
-                type="submit"
-                disabled={isSubmitting}
+                type="button"
+                disabled={true}
                 style={{
                   ...styles.submitBtn,
-                  opacity: isSubmitting ? 0.75 : 1,
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  background: 'linear-gradient(180deg, #4A3E38 0%, #2A221E 100%)',
+                  border: '2.5px solid #665548',
+                  color: '#A99B8B',
+                  boxShadow: 'none',
+                  opacity: 0.65,
+                  cursor: 'not-allowed',
                 }}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={24} className="animate-spin" />
-                    <span>CHARTERING YOUR CREW...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>SUBMIT YOUR CREW ROSTER</span>
-                    <span style={{ fontSize: '1.4rem' }}>☠️</span>
-                  </>
-                )}
+                <Lock size={20} />
+                <span>REGISTRATIONS CLOSED</span>
+                <span style={{ fontSize: '1.3rem', filter: 'grayscale(100%)', opacity: 0.6 }}>☠️</span>
               </button>
+              <p
+                style={{
+                  margin: '12px 0 0 0',
+                  color: '#D4AF37',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                }}
+              >
+                Online team registration is currently closed.
+              </p>
             </div>
           </form>
         )}
