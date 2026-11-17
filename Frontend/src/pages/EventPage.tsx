@@ -26,7 +26,7 @@ const EventPage = () => {
     { label: "Prize Pool", value: "₹50K+", icon: Trophy },
     { label: "Mentors", value: "20+", icon: Zap },
   ];
-
+  
  const events = [
   {
     title: "CODE CRAFTER VERSION 3.0",
@@ -43,7 +43,7 @@ const EventPage = () => {
     description: "A treasure hunt for coders, where participants solve coding puzzles to find hidden treasures.",
     date: "29 october 2026",
     location: "CT University, Punjab",
-    status: "upcoming" as const,
+    status: "ended" as const,
     icon: Code,
     registrationPath: "/events/lost-code",
 
@@ -56,6 +56,15 @@ const EventPage = () => {
     status: "ended" as const,
     icon: Trophy,
     registrationPath: "/events/EngineersDay",
+  },
+  {
+    title: "College Event",
+    description: "Share your interest in attending the upcoming college event and explore the planned highlights.",
+    date: "Date to be announced",
+    location: "CT University, Punjab",
+    status: "upcoming" as const,
+    icon: Users,
+    registrationPath: "/events/college-event",
   },
 //   ended/ongoing/upcoming
   

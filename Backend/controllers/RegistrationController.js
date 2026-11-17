@@ -14,7 +14,7 @@ const registerTeam = async (req, res) => {
 
 const getRegistrationsCSV = async (req, res) => {
   try {
-    // Check for API key in headers instead of query for security
+    
     const apiKey = req.headers["x-api-key"];
     if (apiKey !== process.env.REGISTRATION_FORM_KEY) {
       return res.status(403).json({ message: "Unauthorized: Invalid API Key" });

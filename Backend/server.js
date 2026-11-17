@@ -101,6 +101,8 @@ app.use('/api/lost-code', require('./routes/LostCodeRegistrationRoute'));
 app.use('/api/codecrafter-register', require('./routes/CodeCrafterRegistrationServer'));
 app.use('/api/robomech-register', require('./routes/RoboMechRegistrationServer'));
 app.use('/api/engineers-day', require('./routes/EngineersDayRoute'));
+app.use('/api/event-registrations', require('./routes/EventInterestRegistrationRoute'));
+app.use('/api/memento-registrations', require('./routes/MementoRegistrationRoute'));
 
 // ==========================
 // ✅ Health Check Route

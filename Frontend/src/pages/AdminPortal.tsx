@@ -40,6 +40,7 @@ import {
   Image as ImageIcon,
   UploadCloud
 } from "lucide-react";
+import EventInterestRegistrations from "@/components/admin/EventInterestRegistrations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -130,7 +131,7 @@ export default function AdminPortal() {
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  const [activeTab, setActiveTab] = useState<"screening" | "official-members" | "queries" | "arenas" | "gallery">("screening");
+  const [activeTab, setActiveTab] = useState<"screening" | "official-members" | "queries" | "arenas" | "event-registrations" | "gallery">("screening");
   const [editingOfficialId, setEditingOfficialId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -1268,6 +1269,20 @@ export default function AdminPortal() {
               {galleryList.length}
             </span>
           </button>
+
+          <button
+            id="tab-event-registrations-btn"
+            type="button"
+            onClick={() => setActiveTab("event-registrations")}
+            className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ${
+              activeTab === "event-registrations"
+                ? "bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-emerald-500/25"
+                : "bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Event Registrations</span>
+          </button>
         </div>
 
         {/* ================================================================= */}
@@ -2197,6 +2212,8 @@ export default function AdminPortal() {
             </div>
           </div>
         )}
+
+        {activeTab === "event-registrations" && <EventInterestRegistrations />}
 
         {/* ================================================================= */}
         {/* TAB 5: GALLERY MANAGEMENT                                          */}

@@ -674,6 +674,83 @@ export const getEngineersDayStats = async () => {
   }
 };
 
+export interface EventInterestRegistration {
+  _id: string;
+  fullName: string;
+  batch: string;
+  program: string;
+  section: string;
+  registrationNumber: string;
+  interested: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventInterestRegistrationStats {
+  totalRegistrations: number;
+  interested: number;
+  notInterested: number;
+  maybe: number;
+}
+
+const eventRegistrationError = async (response: Response) => {
+  const data = await response.json().catch(() => ({}));
+  return new Error(typeof data.message === "string" ? data.message : `Request failed (${response.status}).`);
+};
+
+export const submitEventInterestRegistration = async (
+  registration: Omit<EventInterestRegistration, "_id" | "createdAt" | "updatedAt">
+) => {
+  const response = await fetch(`${API_BASE_URL}/api/event-registrations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(registration),
+  });
+  if (!response.ok) throw await eventRegistrationError(response);
+  return response.json();
+};
+
+export const submitMementoRegistration = async (formData: FormData) => {
+  const response = await fetch(`${API_BASE_URL}/api/memento-registrations`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) throw await eventRegistrationError(response);
+  return response.json();
+};
+
+export const getEventInterestRegistrations = async (): Promise<EventInterestRegistration[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/event-registrations`, {
+    headers: getAdminAuthHeaders(),
+  });
+  if (!response.ok) throw await eventRegistrationError(response);
+  const data = await response.json();
+  return data.data;
+};
+
+export const getEventInterestRegistrationStats = async (): Promise<EventInterestRegistrationStats> => {
+  const response = await fetch(`${API_BASE_URL}/api/event-registrations/stats`, {
+    headers: getAdminAuthHeaders(),
+  });
+  if (!response.ok) throw await eventRegistrationError(response);
+  const data = await response.json();
+  return {
+    totalRegistrations: data.totalRegistrations,
+    interested: data.interested,
+    notInterested: data.notInterested,
+    maybe: data.maybe,
+  };
+};
+
+export const deleteEventInterestRegistration = async (id: string) => {
+  const response = await fetch(`${API_BASE_URL}/api/event-registrations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: getAdminAuthHeaders(),
+  });
+  if (!response.ok) throw await eventRegistrationError(response);
+  return response.json();
+};
+
 export const adminLogin = async (credentials: { email: string; password: string }) => {
   const url = `${API_BASE_URL}/api/admin/login`;
   try {
